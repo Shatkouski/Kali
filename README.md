@@ -12,7 +12,7 @@
 
 > [Link to start_setting](start_setting)
 
-```
+```py
 #!/usr/bin/env python3
 import os
 import subprocess
