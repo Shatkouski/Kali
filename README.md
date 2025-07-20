@@ -5,10 +5,10 @@
 
 ## Скрипт для установки и обновления необходимых пакетов Kali_Linux - Pentest:
 
-* `Update&&Upgrade` - создание дампа оперативной памяти
-* `rockyou` - фреймворк для работы с артефактами форензики
-* `seclist` - создание symbol table для кастомного ядра linux
-Ответы:
+* `Update&&Upgrade` - 
+* `rockyou` - 
+* `seclist` - 
+* `установка доп пакетов` -
 
 > [Link to start_setting](start_setting)
 
