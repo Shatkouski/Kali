@@ -10,7 +10,7 @@
 * `seclist` - создание symbol table для кастомного ядра linux
 Ответы:
 
-> [Link to start_setting](bin/start_setting)
+> [Link to start_setting](start_setting)
 
 ```
 #!/usr/bin/env python3
