@@ -3,8 +3,6 @@
 - [Первичная настройка Kali Linux](#Kali)
   * [Установка и обновление необходимых пакетов](#------------------------)
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
 ## Скрипт для установки и обновления необходимых пакетов Kali_Linux - Pentest:
 
 * `AVML` - создание дампа оперативной памяти
