@@ -1,1 +1,175 @@
 # Kali
+
+- [Первичная настройка Kali Linux](#Kali)
+  * [Установка и обновление необходимых пакетов](#------------------------)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+## Скрипт для установки и обновления необходимых пакетов Kali_Linux - Pentest:
+
+* `AVML` - создание дампа оперативной памяти
+* `Volatility` - фреймворк для работы с артефактами форензики
+* `dwarf2json` - создание symbol table для кастомного ядра linux
+* Сделает снимок Debug kernel для symbol table
+
+Ответы:
+
+> [Link to start_setting](bin/start_setting)
+
+```
+#!/usr/bin/env python3
+import os
+import subprocess
+import sys
+
+# Цвета ANSI для вывода сообщений
+COLOR_GREEN = "\033[92m"
+COLOR_RED = "\033[91m"
+COLOR_YELLOW = "\033[93m"
+COLOR_RESET = "\033[0m"
+
+def success(msg):
+    print(f"{COLOR_GREEN}{msg}{COLOR_RESET}")
+
+def error(msg):
+    print(f"{COLOR_RED}{msg}{COLOR_RESET}")
+
+def warning(msg):
+    print(f"{COLOR_YELLOW}{msg}{COLOR_RESET}")
+
+def is_root():
+    return os.geteuid() == 0
+
+def apt_update_upgrade():
+    if ask_update():
+        try:
+            print("Обновление списка репозиториев (apt update)...")
+            subprocess.run(['apt', 'update', '-y'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("Обновление пакетов (apt upgrade)...")
+            subprocess.run(['apt', 'upgrade', '-y'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            success("Пакеты успешно обновлены.")
+        except subprocess.CalledProcessError:
+            error("Возникла ошибка при обновлении пакетов.")
+            sys.exit(1)
+    else:
+        print("Пропуск обновления пакетов.")
+
+def check_or_install_package(pkgname, desc):
+    print(f"Проверка, установлен ли пакет {desc}...")
+    result = subprocess.run(['dpkg', '-s', pkgname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        success(f"Пакет {desc} уже установлен.")
+    else:
+        print(f"{desc} не установлен. Установка...")
+        try:
+            proc = subprocess.run(
+                ['apt', 'install', '-y', pkgname],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+            success(f"Пакет {desc} успешно установлен.")
+        except subprocess.CalledProcessError as e:
+            error(f"Ошибка при установке пакета {desc}.")
+            stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+            warning(stderr_out)
+            sys.exit(1)
+
+def check_and_extract_rockyou():
+    rockyou_txt = "/usr/share/wordlists/rockyou.txt"
+    rockyou_gz = "/usr/share/wordlists/rockyou.txt.gz"
+    rockyou_tar_gz = "/usr/share/wordlists/rockyou.tar.gz"
+
+    if os.path.isfile(rockyou_txt):
+        success("Словарь rockyou готов к использованию.")
+        return
+
+    # Проверяем rockyou.txt.gz
+    if os.path.isfile(rockyou_gz):
+        print("Файл rockyou.txt не найден, но найден архив rockyou.txt.gz. Распаковываем...")
+        try:
+            subprocess.run(['gunzip', '-kf', rockyou_gz], check=True)
+            if os.path.isfile(rockyou_txt):
+                success("Словарь rockyou успешно распакован и готов к использованию.")
+            else:
+                error("Ошибка: не удалось распаковать rockyou.txt.gz.")
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при распаковке rockyou.txt.gz.")
+            warning(str(e))
+        return
+
+    # Проверяем rockyou.tar.gz (на случай, если архив есть только в таком виде)
+    if os.path.isfile(rockyou_tar_gz):
+        print("Файл rockyou.txt не найден, но найден архив rockyou.tar.gz. Распаковываем...")
+        try:
+            subprocess.run(['tar', 'xfz', rockyou_tar_gz, '-C', '/usr/share/wordlists/'], check=True)
+            if os.path.isfile(rockyou_txt):
+                success("Словарь rockyou успешно распакован и готов к использованию.")
+            else:
+                error("Ошибка: не удалось распаковать rockyou.tar.gz.")
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при распаковке rockyou.tar.gz.")
+            warning(str(e))
+        return
+
+    warning("Словарь rockyou.txt и архивы не найдены. Установите пакет seclists, если ещё не установлен.")
+
+def check_or_install_wpscan():
+    print("Проверка, установлен ли WPScan...")
+    result = subprocess.run(['dpkg', '-s', 'wpscan'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        success("Пакет WPScan уже установлен.")
+    else:
+        print("WPScan не установлен. Установка...")
+        try:
+            proc = subprocess.run(
+                ['apt', 'install', '-y', 'wpscan'],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
+            success("Пакет WPScan успешно установлен.")
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при установке пакета WPScan.")
+            stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+            warning(stderr_out)
+            sys.exit(1)
+    update_wpscan_db()
+
+def update_wpscan_db():
+    print("Запуск обновления базы WPScan...")
+    try:
+        proc = subprocess.run(['wpscan', '--update'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        success("База уязвимостей WPScan успешно обновлена.")
+    except subprocess.CalledProcessError as e:
+        error("Ошибка при обновлении базы WPScan.")
+        stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+        warning(stderr_out)
+
+def ask_update():
+    prompt = f"{COLOR_YELLOW}Обновить пакеты? [y/n]: {COLOR_RESET}"
+    while True:
+        try:
+            answer = input(prompt).strip().lower()
+        except EOFError:
+            error("Ввод недоступен! Запустите скрипт в интерактивном режиме из-под root или с sudo.")
+            sys.exit(2)
+        if answer in ['y', 'yes', 'д', 'да']:
+            return True
+        elif answer in ['n', 'no', 'н', 'нет']:
+            return False
+        else:
+            print("Ответ не распознан. Пожалуйста, введите y/д/yes/да или n/н/no/нет.")
+
+if __name__ == "__main__":
+    if not is_root():
+        error("Скрипт должен быть запущен от root. Используйте: sudo python3 script.py")
+        sys.exit(1)
+    apt_update_upgrade()
+    check_or_install_package('hydra', 'hydra')
+    check_or_install_package('seclists', 'seclists')
+    check_and_extract_rockyou()
+    check_or_install_wpscan()
+
+
+```
