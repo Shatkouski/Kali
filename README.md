@@ -80,7 +80,6 @@ def check_and_extract_rockyou():
         success("Словарь rockyou готов к использованию.")
         return
 
-    # Проверяем rockyou.txt.gz
     if os.path.isfile(rockyou_gz):
         print("Файл rockyou.txt не найден, но найден архив rockyou.txt.gz. Распаковываем...")
         try:
@@ -94,7 +93,6 @@ def check_and_extract_rockyou():
             warning(str(e))
         return
 
-    # Проверяем rockyou.tar.gz (на случай, если архив есть только в таком виде)
     if os.path.isfile(rockyou_tar_gz):
         print("Файл rockyou.txt не найден, но найден архив rockyou.tar.gz. Распаковываем...")
         try:
@@ -157,15 +155,44 @@ def ask_update():
         else:
             print("Ответ не распознан. Пожалуйста, введите y/д/yes/да или n/н/no/нет.")
 
+def additional_packages_manual_menu():
+    while True:
+        print(f"\n{COLOR_YELLOW}Хотите установить дополнительный пакет? (введите название или 0 для выхода){COLOR_RESET}")
+        pkgname = input("Название пакета: ").strip()
+        if pkgname == "" or pkgname == "0":
+            print("Выход из меню дополнительных пакетов.")
+            break
+        print(f"Проверка, установлен ли пакет {pkgname}...")
+        result = subprocess.run(['dpkg', '-s', pkgname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode == 0:
+            success(f"Пакет {pkgname} уже установлен.")
+        else:
+            warning(f"Пакет {pkgname} не найден. Пытаемся установить...")
+            try:
+                proc = subprocess.run(
+                    ['apt', 'install', '-y', pkgname],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE
+                )
+                success(f"Пакет {pkgname} успешно установлен.")
+            except subprocess.CalledProcessError as e:
+                error(f"Ошибка при установке пакета {pkgname}!")
+                stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+                warning(stderr_out)
+
 if __name__ == "__main__":
     if not is_root():
         error("Скрипт должен быть запущен от root. Используйте: sudo python3 script.py")
         sys.exit(1)
+
+    # Основная автоматическая часть
     apt_update_upgrade()
-    check_or_install_package('hydra', 'hydra')
     check_or_install_package('seclists', 'seclists')
     check_and_extract_rockyou()
     check_or_install_wpscan()
 
+    # Универсальное меню для дополнительных пакетов
+    additional_packages_manual_menu()
 
 ```
