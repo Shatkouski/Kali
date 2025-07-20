@@ -5,11 +5,9 @@
 
 ## Скрипт для установки и обновления необходимых пакетов Kali_Linux - Pentest:
 
-* `AVML` - создание дампа оперативной памяти
-* `Volatility` - фреймворк для работы с артефактами форензики
-* `dwarf2json` - создание symbol table для кастомного ядра linux
-* Сделает снимок Debug kernel для symbol table
-
+* `Update&&Upgrade` - создание дампа оперативной памяти
+* `rockyou` - фреймворк для работы с артефактами форензики
+* `seclist` - создание symbol table для кастомного ядра linux
 Ответы:
 
 > [Link to start_setting](bin/start_setting)
