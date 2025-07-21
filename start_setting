@@ -9,6 +9,20 @@ COLOR_RED = "\033[91m"
 COLOR_YELLOW = "\033[93m"
 COLOR_RESET = "\033[0m"
 
+def print_ascii_banner():
+    banner = f"""{COLOR_YELLOW}
+
+
+███████╗██╗         ██████╗ ███████╗ █████╗ ██████╗     ████████╗███████╗ █████╗ ███╗   ███╗
+██╔════╝██║         ██╔══██╗██╔════╝██╔══██╗██╔══██╗    ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║
+███████╗██║         ██████╔╝█████╗  ███████║██║  ██║       ██║   █████╗  ███████║██╔████╔██║
+╚════██║██║         ██╔══██╗██╔══╝  ██╔══██║██║  ██║       ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║
+███████║███████╗    ██║  ██║███████╗██║  ██║██████╔╝       ██║   ███████╗██║  ██║██║ ╚═╝ ██║
+╚══════╝╚══════╝    ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═════╝        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝
+                                                                                  
+{COLOR_RESET}"""
+    print(banner)
+
 def success(msg):
     print(f"{COLOR_GREEN}{msg}{COLOR_RESET}")
 
@@ -142,7 +156,7 @@ def ask_update():
 
 def additional_packages_manual_menu():
     while True:
-        print(f"\n{COLOR_YELLOW}Хотите установить дополнительный пакет? (введите название или 0 для выхода){COLOR_RESET}")
+        print(f"\n{COLOR_YELLOW}Хотите установить дополнительный пакет? (введите название пакета или 0 для выхода){COLOR_RESET}")
         pkgname = input("Название пакета: ").strip()
         if pkgname == "" or pkgname == "0":
             print("Выход из меню дополнительных пакетов.")
@@ -166,16 +180,35 @@ def additional_packages_manual_menu():
                 stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                 warning(stderr_out)
 
+def main_menu():
+    print_ascii_banner()
+    print(f"{COLOR_YELLOW}Главное меню:{COLOR_RESET}")
+    print("1. Полная установка (базовые пакеты и опции)")
+    print("2. Установка дополнительного пакета")
+    print("3. Выйти")
+    while True:
+        choice = input("Выберите действие (1-3): ").strip()
+        if choice in ["1", "2", "3"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2 или 3.")
+
 if __name__ == "__main__":
     if not is_root():
         error("Скрипт должен быть запущен от root. Используйте: sudo python3 script.py")
         sys.exit(1)
 
-    # Основная автоматическая часть
-    apt_update_upgrade()
-    check_or_install_package('seclists', 'seclists')
-    check_and_extract_rockyou()
-    check_or_install_wpscan()
-
-    # Универсальное меню для дополнительных пакетов
-    additional_packages_manual_menu()
+    action = main_menu()
+    if action == "1":
+        # Полная установка
+        apt_update_upgrade()
+        check_or_install_package('seclists', 'seclists')
+        check_and_extract_rockyou()
+        check_or_install_wpscan()
+        additional_packages_manual_menu()
+    elif action == "2":
+        # Только установка дополнительных пакетов
+        additional_packages_manual_menu()
+    elif action == "3":
+        print("Выход.")
+        sys.exit(0)
