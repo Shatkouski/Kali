@@ -21,7 +21,7 @@ def print_ascii_banner():
 ╚══════╝╚══════╝    ╚═╝  ╚═╝╚══════╝╚═════╝        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝
                                                                                   
 {COLOR_RESET}"""
-    print(banner)fgfgf
+    print(banner)
 
 def success(msg):
     print(f"{COLOR_GREEN}{msg}{COLOR_RESET}")
