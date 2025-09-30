@@ -658,40 +658,108 @@ def install_bloodyad():
         return False
 
 def install_bloodhound():
-    """Установка BloodHoundAD - визуализация и анализ Active Directory"""
-    print("Проверка, установлен ли BloodHound...")
+    """Установка BloodHoundAD (BloodHound.py + BloodHound GUI)"""
+    print("Проверка, установлен ли BloodHound.py...")
     
-    # Check if BloodHound is already installed
-    result = subprocess.run(['which', 'bloodhound'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode == 0:
-        success("BloodHound уже установлен.")
-        return True
+    # Check if BloodHound.py is already installed
+    bloodhound_py_dir = "/opt/BloodHound.py"
+    bloodhound_installed = os.path.exists(bloodhound_py_dir)
     
-    print("BloodHound не установлен. Попытка установки...")
+    if bloodhound_installed:
+        success("BloodHound.py уже установлен.")
+    else:
+        print("BloodHound.py не установлен. Установка...")
+        
+        # Check if git is available
+        if not check_wget():
+            error("Не удалось установить wget. Установка BloodHound прервана.")
+            return False
+        
+        git_result = subprocess.run(['which', 'git'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if git_result.returncode != 0:
+            print("git не найден. Установка...")
+            try:
+                subprocess.run(['apt', 'install', '-y', 'git'], check=True, 
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                success("git успешно установлен.")
+            except subprocess.CalledProcessError:
+                error("Ошибка при установке git.")
+                return False
+        
+        # Install pip3 if not available
+        pip_result = subprocess.run(['which', 'pip3'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if pip_result.returncode != 0:
+            print("pip3 не найден. Установка python3-pip...")
+            try:
+                subprocess.run(['apt', 'install', '-y', 'python3-pip'], check=True, 
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                success("python3-pip успешно установлен.")
+            except subprocess.CalledProcessError:
+                error("Ошибка при установке pip3.")
+                return False
+        
+        # Clone BloodHound.py repository
+        print("Клонирование BloodHound.py...")
+        try:
+            if not ensure_directory_exists('/opt'):
+                error("Не удалось создать директорию /opt")
+                return False
+            
+            subprocess.run(['git', 'clone', 'https://github.com/fox-it/BloodHound.py.git', bloodhound_py_dir], 
+                         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            success("BloodHound.py успешно клонирован.")
+            
+            # Install BloodHound.py
+            print("Установка BloodHound.py через pip3...")
+            subprocess.run(['pip3', 'install', 'bloodhound'], check=True, 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            success("BloodHound.py успешно установлен!")
+            
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при установке BloodHound.py.")
+            stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+            warning(f"Детали ошибки: {stderr_out}")
+            return False
     
-    # Try to install from apt repositories
-    print("Попытка установки BloodHound из репозиториев...")
+    # Install BloodHound GUI and Neo4j
+    print("Установка BloodHound GUI и Neo4j...")
     try:
+        # Install Java
+        print("Установка OpenJDK...")
+        subprocess.run(['apt', 'install', '-y', 'openjdk-11-jdk'], check=True, 
+                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        
+        # Install Neo4j
+        print("Установка Neo4j...")
+        subprocess.run(['apt', 'install', '-y', 'neo4j'], check=True, 
+                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        
+        # Install BloodHound GUI from apt
+        print("Установка BloodHound GUI...")
         subprocess.run(['apt', 'install', '-y', 'bloodhound'], check=True, 
                      stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        success("BloodHound успешно установлен из репозиториев!")
-        success("Запуск: bloodhound")
+        
+        success("BloodHoundAD успешно установлен!")
+        success("Запуск инжестора: bloodhound-python или python3 -m bloodhound")
+        success("Запуск GUI: bloodhound")
+        warning("Не забудьте запустить Neo4j перед использованием BloodHound:")
+        warning("  sudo neo4j console")
         return True
         
     except KeyboardInterrupt:
-        print(f"\n{COLOR_YELLOW}Установка BloodHound прервана пользователем.{COLOR_RESET}")
+        print(f"\n{COLOR_YELLOW}Установка BloodHoundAD прервана пользователем.{COLOR_RESET}")
         return False
     except subprocess.CalledProcessError as e:
-        error("Ошибка при установке BloodHound.")
+        error("Ошибка при установке BloodHoundAD.")
         stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
         warning(f"Детали ошибки: {stderr_out}")
-        warning("BloodHound может требовать дополнительных зависимостей (Neo4j).")
+        warning("Инструкции: https://github.com/BloodHoundAD/BloodHound")
         return False
     except FileNotFoundError as e:
         error(f"Файл не найден: {e}")
         return False
     except Exception as e:
-        error(f"Неожиданная ошибка при установке BloodHound: {e}")
+        error(f"Неожиданная ошибка при установке BloodHoundAD: {e}")
         return False
 
 def additional_packages_manual_menu():
@@ -815,7 +883,7 @@ def active_directory_menu():
     """Меню Active Directory инструментов"""
     print(f"\n{COLOR_YELLOW}🏢 Active Directory:{COLOR_RESET}")
     print("1. bloodyAD - инструмент для атак на Active Directory")
-    print("2. BloodHoundAD - визуализация и анализ AD")
+    print("2. BloodHoundAD - сбор данных и визуализация AD (инжестор + GUI)")
     print("3. ← Назад в главное меню")
     while True:
         try:
