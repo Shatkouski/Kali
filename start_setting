@@ -101,7 +101,7 @@ def apt_update_upgrade():
             success("Пакеты успешно обновлены.")
         except subprocess.CalledProcessError:
             error("Возникла ошибка при обновлении пакетов.")
-            sys.exit(1)
+            return False  # Возвращаем False вместо выхода из программы
     else:
         print("Пропуск обновления пакетов.")
 
@@ -125,15 +125,16 @@ def check_or_install_package(pkgname, desc):
                 error(f"Ошибка при установке пакета {desc}.")
                 stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                 warning(stderr_out)
-                sys.exit(1)
+                return False  # Возвращаем False вместо выхода из программы
     except FileNotFoundError:
         error("Команда dpkg не найдена. Убедитесь, что вы в Linux-окружении.")
-        sys.exit(1)
+        return False  # Возвращаем False вместо выхода из программы
     except Exception as e:
         error(f"Неожиданная ошибка при проверке пакета {desc}: {e}")
-        sys.exit(1)
+        return False  # Возвращаем False вместо выхода из программы
 
 def check_and_extract_rockyou():
+    """Проверка и распаковка словаря rockyou"""
     rockyou_txt = "/usr/share/wordlists/rockyou.txt"
     rockyou_gz = "/usr/share/wordlists/rockyou.txt.gz"
     rockyou_tar_gz = "/usr/share/wordlists/rockyou.tar.gz"
@@ -141,11 +142,11 @@ def check_and_extract_rockyou():
     # Ensure wordlists directory exists
     if not ensure_directory_exists('/usr/share/wordlists'):
         error("Не удалось создать директорию /usr/share/wordlists")
-        return
+        return False
 
     if os.path.isfile(rockyou_txt):
         success("Словарь rockyou готов к использованию.")
-        return
+        return True
 
     if os.path.isfile(rockyou_gz):
         print("Файл rockyou.txt не найден, но найден архив rockyou.txt.gz. Распаковываем...")
@@ -153,15 +154,18 @@ def check_and_extract_rockyou():
             subprocess.run(['gunzip', '-kf', rockyou_gz], check=True)
             if os.path.isfile(rockyou_txt):
                 success("Словарь rockyou успешно распакован и готов к использованию.")
+                return True
             else:
                 error("Ошибка: не удалось распаковать rockyou.txt.gz.")
+                return False
         except subprocess.CalledProcessError as e:
             error("Ошибка при распаковке rockyou.txt.gz.")
             stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
             warning(f"Детали ошибки: {stderr_out}")
+            return False
         except FileNotFoundError:
             error("Команда gunzip не найдена. Установите gzip.")
-        return
+            return False
 
     if os.path.isfile(rockyou_tar_gz):
         print("Файл rockyou.txt не найден, но найден архив rockyou.tar.gz. Распаковываем...")
@@ -169,17 +173,21 @@ def check_and_extract_rockyou():
             subprocess.run(['tar', 'xfz', rockyou_tar_gz, '-C', '/usr/share/wordlists/'], check=True)
             if os.path.isfile(rockyou_txt):
                 success("Словарь rockyou успешно распакован и готов к использованию.")
+                return True
             else:
                 error("Ошибка: не удалось распаковать rockyou.tar.gz.")
+                return False
         except subprocess.CalledProcessError as e:
             error("Ошибка при распаковке rockyou.tar.gz.")
             stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
             warning(f"Детали ошибки: {stderr_out}")
+            return False
         except FileNotFoundError:
             error("Команда tar не найдена. Установите tar.")
-        return
+            return False
 
     warning("Словарь rockyou.txt и архивы не найдены. Установите пакет seclists, если ещё не установлен.")
+    return False
 
 def check_or_install_wpscan():
     print("Проверка, установлен ли WPScan...")
@@ -201,14 +209,14 @@ def check_or_install_wpscan():
                 error("Ошибка при установке пакета WPScan.")
                 stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                 warning(stderr_out)
-                sys.exit(1)
+                return False  # Возвращаем False вместо выхода из программы
         update_wpscan_db()
     except FileNotFoundError:
         error("Команда dpkg не найдена. Убедитесь, что вы в Linux-окружении.")
-        sys.exit(1)
+        return False  # Возвращаем False вместо выхода из программы
     except Exception as e:
         error(f"Неожиданная ошибка при работе с WPScan: {e}")
-        sys.exit(1)
+        return False  # Возвращаем False вместо выхода из программы
 
 def update_wpscan_db():
     print("Запуск обновления базы WPScan...")
@@ -231,7 +239,7 @@ def check_or_install_burpsuite():
     result = subprocess.run(['which', 'burpsuite'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if result.returncode == 0:
         success("Burp Suite Community уже установлен.")
-        return
+        return  # Возвращаемся в главное меню
     
     # Check disk space before downloading
     if not check_disk_space():
@@ -337,13 +345,157 @@ def ask_update():
             answer = input(prompt).strip().lower()
         except EOFError:
             error("Ввод недоступен! Запустите скрипт в интерактивном режиме из-под root или с sudo.")
-            sys.exit(2)
+            return False  # Возвращаем False вместо выхода из программы
         if answer in ['y', 'yes', 'д', 'да']:
             return True
         elif answer in ['n', 'no', 'н', 'нет']:
             return False
         else:
             print("Ответ не распознан. Пожалуйста, введите y/д/yes/да или n/н/no/нет.")
+
+def check_or_install_pre2k():
+    """Установка pre2k - инструмента для восстановления паролей"""
+    print("Проверка, установлен ли pre2k...")
+    
+    # Check if pre2k is already installed
+    result = subprocess.run(['which', 'pre2k'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        success("pre2k уже установлен.")
+        return True
+    
+    print("pre2k не установлен. Установка...")
+    
+    # Check if git is available
+    git_result = subprocess.run(['which', 'git'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if git_result.returncode != 0:
+        print("git не найден. Установка...")
+        try:
+            subprocess.run(['apt', 'install', '-y', 'git'], check=True, 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            success("git успешно установлен.")
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при установке git.")
+            stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+            warning(f"Детали ошибки: {stderr_out}")
+            return False
+    
+    # Check if make is available
+    make_result = subprocess.run(['which', 'make'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if make_result.returncode != 0:
+        print("make не найден. Установка...")
+        try:
+            subprocess.run(['apt', 'install', '-y', 'make'], check=True, 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            success("make успешно установлен.")
+        except subprocess.CalledProcessError as e:
+            error("Ошибка при установке make.")
+            stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+            warning(f"Детали ошибки: {stderr_out}")
+            return False
+    
+    # Clone and build pre2k
+    pre2k_dir = "/opt/pre2k"
+    try:
+        # Ensure /opt directory exists
+        if not ensure_directory_exists('/opt'):
+            error("Не удалось создать директорию /opt")
+            return False
+        
+        # Clone pre2k repository
+        print("Клонирование репозитория pre2k...")
+        if os.path.exists(pre2k_dir):
+            print("Директория pre2k уже существует. Обновление...")
+            subprocess.run(['git', 'pull'], cwd=pre2k_dir, check=True, 
+                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        else:
+            subprocess.run(['git', 'clone', 'https://github.com/OpenSecurityResearch/pre2k.git', pre2k_dir], 
+                         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        
+        success("pre2k успешно клонирован.")
+        
+        # Build pre2k
+        print("Сборка pre2k...")
+        subprocess.run(['make'], cwd=pre2k_dir, check=True, 
+                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        success("pre2k успешно собран.")
+        
+        # Create symlink to /usr/local/bin
+        subprocess.run(['ln', '-sf', f'{pre2k_dir}/pre2k', '/usr/local/bin/pre2k'], check=True)
+        subprocess.run(['chmod', '+x', '/usr/local/bin/pre2k'], check=True)
+        
+        success("pre2k успешно установлен!")
+        success("Запуск: pre2k")
+        
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        error("Ошибка при установке pre2k.")
+        stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
+        warning(f"Детали ошибки: {stderr_out}")
+        return False
+    except FileNotFoundError as e:
+        error(f"Файл не найден: {e}")
+        return False
+    except PermissionError as e:
+        error(f"Ошибка прав доступа: {e}")
+        return False
+    except Exception as e:
+        error(f"Неожиданная ошибка при установке pre2k: {e}")
+        return False
+
+def install_seclists_and_rockyou():
+    """Установка seclists и распаковка rockyou"""
+    print("Установка seclists и настройка rockyou...")
+    
+    # Check current status
+    seclists_installed = False
+    rockyou_available = False
+    
+    # Check if seclists is already installed
+    print("Проверка статуса seclists...")
+    seclists_result = subprocess.run(['dpkg', '-s', 'seclists'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if seclists_result.returncode == 0:
+        success("seclists уже установлен.")
+        seclists_installed = True
+    else:
+        print("seclists не установлен. Установка...")
+        if check_or_install_package('seclists', 'seclists'):
+            seclists_installed = True
+        else:
+            error("Не удалось установить seclists.")
+            return False
+    
+    # Check if rockyou is already available
+    print("Проверка статуса rockyou...")
+    rockyou_txt = "/usr/share/wordlists/rockyou.txt"
+    if os.path.isfile(rockyou_txt):
+        success("rockyou.txt уже доступен.")
+        rockyou_available = True
+    else:
+        print("rockyou.txt не найден. Попытка распаковки...")
+        check_and_extract_rockyou()
+        if os.path.isfile(rockyou_txt):
+            rockyou_available = True
+            success("rockyou.txt успешно распакован.")
+        else:
+            warning("rockyou.txt не удалось распаковать. Возможно, seclists не содержит rockyou.")
+    
+    # Summary
+    if seclists_installed and rockyou_available:
+        success("seclists и rockyou успешно настроены!")
+        return True
+    elif seclists_installed and not rockyou_available:
+        warning("seclists установлен, но rockyou.txt недоступен.")
+        warning("Попробуйте переустановить seclists или скачать rockyou вручную.")
+        return False
+    else:
+        error("Не удалось настроить seclists и rockyou.")
+        return False
+
+def system_update_only():
+    """Только обновление системы"""
+    print("Обновление системы...")
+    return apt_update_upgrade()
 
 def additional_packages_manual_menu():
     while True:
@@ -392,13 +544,17 @@ def main_menu():
     print("1. Полная установка (базовые пакеты и опции)")
     print("2. Установка дополнительного пакета")
     print("3. Установка Burp Suite Community")
-    print("4. Выйти")
+    print("4. Установка WPScan")
+    print("5. Установка seclists и rockyou")
+    print("6. Установка pre2k (Password Recovery Tool)")
+    print("7. Обновление системы")
+    print("8. Выйти")
     while True:
-        choice = input("Выберите действие (1-4): ").strip()
-        if choice in ["1", "2", "3", "4"]:
+        choice = input("Выберите действие (1-8): ").strip()
+        if choice in ["1", "2", "3", "4", "5", "6", "7", "8"]:
             return choice
         else:
-            warning("Неверный выбор! Введите 1, 2, 3 или 4.")
+            warning("Неверный выбор! Введите 1, 2, 3, 4, 5, 6, 7 или 8.")
 
 if __name__ == "__main__":
     # Проверка операционной системы
@@ -412,21 +568,44 @@ if __name__ == "__main__":
         error("Скрипт должен быть запущен от root. Используйте: sudo python3 start_setting")
         sys.exit(1)
 
-    action = main_menu()
-    if action == "1":
-        # Полная установка
-        apt_update_upgrade()
-        check_or_install_package('seclists', 'seclists')
-        check_and_extract_rockyou()
-        check_or_install_wpscan()
-        check_or_install_burpsuite()
-        additional_packages_manual_menu()
-    elif action == "2":
-        # Только установка дополнительных пакетов
-        additional_packages_manual_menu()
-    elif action == "3":
-        # Установка Burp Suite Community
-        check_or_install_burpsuite()
-    elif action == "4":
-        print("Выход.")
-        sys.exit(0)
+    # Главный цикл программы
+    while True:
+        action = main_menu()
+        if action == "1":
+            # Полная установка
+            apt_update_upgrade()
+            check_or_install_package('seclists', 'seclists')
+            check_and_extract_rockyou()
+            check_or_install_wpscan()
+            check_or_install_burpsuite()
+            check_or_install_pre2k()
+            additional_packages_manual_menu()
+        elif action == "2":
+            # Только установка дополнительных пакетов
+            additional_packages_manual_menu()
+        elif action == "3":
+            # Установка Burp Suite Community
+            check_or_install_burpsuite()
+        elif action == "4":
+            # Установка WPScan
+            check_or_install_wpscan()
+        elif action == "5":
+            # Установка seclists и rockyou
+            install_seclists_and_rockyou()
+        elif action == "6":
+            # Установка pre2k
+            check_or_install_pre2k()
+        elif action == "7":
+            # Обновление системы
+            system_update_only()
+        elif action == "8":
+            print("Выход.")
+            sys.exit(0)
+        
+        # После выполнения действия возвращаемся в главное меню
+        print(f"\n{COLOR_YELLOW}Нажмите Enter для возврата в главное меню...{COLOR_RESET}")
+        try:
+            input()
+        except (EOFError, KeyboardInterrupt):
+            print("\nВыход из программы.")
+            sys.exit(0)
