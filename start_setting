@@ -24,11 +24,11 @@ def print_ascii_banner():
                     ███████║███████╗    ██║  ██║███████╗██████╔╝       ██║   ███████╗██║  ██║██║ ╚═╝ ██║
                     ╚══════╝╚══════╝    ╚═╝  ╚═╝╚══════╝╚═════╝        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝
 
-{COLOR_RED}                               ╔══════════════════════════════════════════════════════════╗
-                                                 KALI PENTEST AUTOMATION                   
-                                                  SL RED TEAM TOOLKIT                      
-                               ╚══════════════════════════════════════════════════════════╝{COLOR_RESET}
-{COLOR_RED}                                          Автоматизация установки инструментов{COLOR_RESET}
+{COLOR_RED}                    ╔══════════════════════════════════════════════════════════╗
+                    ║                    KALI PENTEST AUTOMATION                    ║
+                    ║                      SL RED TEAM TOOLKIT                      ║
+                    ╚══════════════════════════════════════════════════════════╝{COLOR_RESET}
+{COLOR_RED}                        Автоматизация установки инструментов{COLOR_RESET}
 """
     print(banner)
 
@@ -739,9 +739,10 @@ def additional_tools_menu():
             print(f"\n{COLOR_YELLOW}Выход из программы.{COLOR_RESET}")
             sys.exit(0)
 
-def main_menu():
-    print_ascii_banner()
-    print(f"{COLOR_YELLOW}Главное меню:{COLOR_RESET}")
+def main_menu(show_banner=True):
+    if show_banner:
+        print_ascii_banner()
+    print(f"\n{COLOR_YELLOW}Главное меню:{COLOR_RESET}")
     print("1. 🔧 Системные утилиты")
     print("2. 🌐 Веб-безопасность")
     print("3. 🔐 Восстановление паролей")
@@ -772,8 +773,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Главный цикл программы
+    first_run = True  # Флаг для показа баннера только при первом запуске
     while True:
-        main_choice = main_menu()
+        main_choice = main_menu(show_banner=first_run)
+        first_run = False  # После первого запуска больше не показываем баннер
         show_pause = True  # Флаг для показа паузы
         
         if main_choice == "1":  # Системные утилиты
