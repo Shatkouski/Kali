@@ -99,6 +99,9 @@ def apt_update_upgrade():
             print("Обновление пакетов (apt upgrade)...")
             subprocess.run(['apt', 'upgrade', '-y'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             success("Пакеты успешно обновлены.")
+        except KeyboardInterrupt:
+            print(f"\n{COLOR_YELLOW}Обновление пакетов прервано пользователем.{COLOR_RESET}")
+            return False
         except subprocess.CalledProcessError:
             error("Возникла ошибка при обновлении пакетов.")
             return False  # Возвращаем False вместо выхода из программы
@@ -121,11 +124,17 @@ def check_or_install_package(pkgname, desc):
                     stderr=subprocess.PIPE
                 )
                 success(f"Пакет {desc} успешно установлен.")
+            except KeyboardInterrupt:
+                print(f"\n{COLOR_YELLOW}Установка пакета {desc} прервана пользователем.{COLOR_RESET}")
+                return False
             except subprocess.CalledProcessError as e:
                 error(f"Ошибка при установке пакета {desc}.")
                 stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                 warning(stderr_out)
                 return False  # Возвращаем False вместо выхода из программы
+    except KeyboardInterrupt:
+        print(f"\n{COLOR_YELLOW}Проверка пакета {desc} прервана пользователем.{COLOR_RESET}")
+        return False
     except FileNotFoundError:
         error("Команда dpkg не найдена. Убедитесь, что вы в Linux-окружении.")
         return False  # Возвращаем False вместо выхода из программы
@@ -158,6 +167,9 @@ def check_and_extract_rockyou():
             else:
                 error("Ошибка: не удалось распаковать rockyou.txt.gz.")
                 return False
+        except KeyboardInterrupt:
+            print(f"\n{COLOR_YELLOW}Распаковка rockyou.txt.gz прервана пользователем.{COLOR_RESET}")
+            return False
         except subprocess.CalledProcessError as e:
             error("Ошибка при распаковке rockyou.txt.gz.")
             stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
@@ -177,6 +189,9 @@ def check_and_extract_rockyou():
             else:
                 error("Ошибка: не удалось распаковать rockyou.tar.gz.")
                 return False
+        except KeyboardInterrupt:
+            print(f"\n{COLOR_YELLOW}Распаковка rockyou.tar.gz прервана пользователем.{COLOR_RESET}")
+            return False
         except subprocess.CalledProcessError as e:
             error("Ошибка при распаковке rockyou.tar.gz.")
             stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
@@ -205,12 +220,18 @@ def check_or_install_wpscan():
                     stderr=subprocess.PIPE
                 )
                 success("Пакет WPScan успешно установлен.")
+            except KeyboardInterrupt:
+                print(f"\n{COLOR_YELLOW}Установка WPScan прервана пользователем.{COLOR_RESET}")
+                return False
             except subprocess.CalledProcessError as e:
                 error("Ошибка при установке пакета WPScan.")
                 stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                 warning(stderr_out)
                 return False  # Возвращаем False вместо выхода из программы
         update_wpscan_db()
+    except KeyboardInterrupt:
+        print(f"\n{COLOR_YELLOW}Работа с WPScan прервана пользователем.{COLOR_RESET}")
+        return False
     except FileNotFoundError:
         error("Команда dpkg не найдена. Убедитесь, что вы в Linux-окружении.")
         return False  # Возвращаем False вместо выхода из программы
@@ -223,6 +244,8 @@ def update_wpscan_db():
     try:
         proc = subprocess.run(['wpscan', '--update'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         success("База уязвимостей WPScan успешно обновлена.")
+    except KeyboardInterrupt:
+        print(f"\n{COLOR_YELLOW}Обновление базы WPScan прервано пользователем.{COLOR_RESET}")
     except subprocess.CalledProcessError as e:
         error("Ошибка при обновлении базы WPScan.")
         stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
@@ -322,6 +345,8 @@ java -jar {burp_jar} "$@"
         success("Burp Suite Community успешно установлен!")
         success("Запуск: burpsuite или через меню приложений")
         
+    except KeyboardInterrupt:
+        print(f"\n{COLOR_YELLOW}Установка Burp Suite прервана пользователем.{COLOR_RESET}")
     except subprocess.CalledProcessError as e:
         error("Ошибка при установке Burp Suite Community.")
         stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
@@ -363,7 +388,19 @@ def check_or_install_pre2k():
         success("pre2k уже установлен.")
         return True
     
-    print("pre2k не установлен. Установка...")
+    print("pre2k не установлен. Попытка установки...")
+    
+    # First, try to install from apt repositories
+    print("Попытка установки pre2k из репозиториев...")
+    try:
+        subprocess.run(['apt', 'install', '-y', 'pre2k'], check=True, 
+                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        success("pre2k успешно установлен из репозиториев!")
+        return True
+    except subprocess.CalledProcessError:
+        print("pre2k не найден в репозиториях. Установка из исходного кода...")
+    
+    # If apt installation failed, try building from source
     
     # Check if git is available
     git_result = subprocess.run(['which', 'git'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -405,11 +442,37 @@ def check_or_install_pre2k():
         print("Клонирование репозитория pre2k...")
         if os.path.exists(pre2k_dir):
             print("Директория pre2k уже существует. Обновление...")
-            subprocess.run(['git', 'pull'], cwd=pre2k_dir, check=True, 
-                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            try:
+                subprocess.run(['git', 'pull'], cwd=pre2k_dir, check=True, 
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError:
+                print("Не удалось обновить. Удаляем старую директорию и клонируем заново...")
+                subprocess.run(['rm', '-rf', pre2k_dir], check=True)
+                subprocess.run(['git', 'clone', 'https://github.com/OpenSecurityResearch/pre2k.git', pre2k_dir], 
+                             check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         else:
-            subprocess.run(['git', 'clone', 'https://github.com/OpenSecurityResearch/pre2k.git', pre2k_dir], 
-                         check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            # Try multiple repositories
+            repositories = [
+                'https://github.com/OpenSecurityResearch/pre2k.git',
+                'https://github.com/garrettfoster13/pre2k.git',
+                'https://github.com/ins1gn1a/pre2k.git'
+            ]
+            
+            cloned = False
+            for repo in repositories:
+                try:
+                    print(f"Попытка клонирования из {repo}...")
+                    subprocess.run(['git', 'clone', repo, pre2k_dir], 
+                                 check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                    cloned = True
+                    break
+                except subprocess.CalledProcessError:
+                    print(f"Не удалось клонировать из {repo}")
+                    continue
+            
+            if not cloned:
+                error("Не удалось клонировать pre2k ни из одного репозитория.")
+                return False
         
         success("pre2k успешно клонирован.")
         
@@ -428,6 +491,9 @@ def check_or_install_pre2k():
         
         return True
         
+    except KeyboardInterrupt:
+        print(f"\n{COLOR_YELLOW}Установка pre2k прервана пользователем.{COLOR_RESET}")
+        return False
     except subprocess.CalledProcessError as e:
         error("Ошибка при установке pre2k.")
         stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
@@ -497,6 +563,41 @@ def system_update_only():
     print("Обновление системы...")
     return apt_update_upgrade()
 
+def install_john():
+    """Установка John the Ripper"""
+    print("Установка John the Ripper...")
+    return check_or_install_package('john', 'John the Ripper')
+
+def install_hashcat():
+    """Установка Hashcat"""
+    print("Установка Hashcat...")
+    return check_or_install_package('hashcat', 'Hashcat')
+
+def install_nmap():
+    """Установка Nmap"""
+    print("Установка Nmap...")
+    return check_or_install_package('nmap', 'Nmap')
+
+def install_metasploit():
+    """Установка Metasploit"""
+    print("Установка Metasploit...")
+    return check_or_install_package('metasploit-framework', 'Metasploit Framework')
+
+def install_nikto():
+    """Установка Nikto"""
+    print("Установка Nikto...")
+    return check_or_install_package('nikto', 'Nikto')
+
+def install_gobuster():
+    """Установка Gobuster"""
+    print("Установка Gobuster...")
+    return check_or_install_package('gobuster', 'Gobuster')
+
+def install_hydra():
+    """Установка Hydra"""
+    print("Установка Hydra...")
+    return check_or_install_package('hydra', 'Hydra')
+
 def additional_packages_manual_menu():
     while True:
         print(f"\n{COLOR_YELLOW}Хотите установить дополнительный пакет? (введите название пакета или 0 для выхода){COLOR_RESET}")
@@ -528,33 +629,107 @@ def additional_packages_manual_menu():
                         stderr=subprocess.PIPE
                     )
                     success(f"Пакет {pkgname} успешно установлен.")
+                except KeyboardInterrupt:
+                    print(f"\n{COLOR_YELLOW}Установка пакета {pkgname} прервана пользователем.{COLOR_RESET}")
                 except subprocess.CalledProcessError as e:
                     error(f"Ошибка при установке пакета {pkgname}!")
                     stderr_out = e.stderr.decode('utf-8') if e.stderr else "Детали ошибки недоступны."
                     warning(f"Детали ошибки: {stderr_out}")
+        except KeyboardInterrupt:
+            print(f"\n{COLOR_YELLOW}Работа с пакетами прервана пользователем.{COLOR_RESET}")
+            break
         except FileNotFoundError:
             error("Команда dpkg не найдена. Убедитесь, что вы в Linux-окружении.")
             break
         except Exception as e:
             error(f"Неожиданная ошибка при работе с пакетом {pkgname}: {e}")
 
+def system_utilities_menu():
+    """Меню системных утилит"""
+    print(f"\n{COLOR_YELLOW}🔧 Системные утилиты:{COLOR_RESET}")
+    print("1. Обновление системы (apt update && apt upgrade)")
+    print("2. Полная установка всех инструментов")
+    print("3. Установка дополнительного пакета")
+    print("4. ← Назад в главное меню")
+    while True:
+        choice = input("Выберите действие (1-4): ").strip()
+        if choice in ["1", "2", "3", "4"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2, 3 или 4.")
+
+def web_security_menu():
+    """Меню веб-безопасности"""
+    print(f"\n{COLOR_YELLOW}🌐 Веб-безопасность:{COLOR_RESET}")
+    print("1. Burp Suite Community - веб-сканер безопасности")
+    print("2. WPScan - сканер уязвимостей WordPress")
+    print("3. ← Назад в главное меню")
+    while True:
+        choice = input("Выберите инструмент (1-3): ").strip()
+        if choice in ["1", "2", "3"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2 или 3.")
+
+def password_recovery_menu():
+    """Меню восстановления паролей"""
+    print(f"\n{COLOR_YELLOW}🔐 Восстановление паролей:{COLOR_RESET}")
+    print("1. pre2k - инструмент восстановления паролей")
+    print("2. john - John the Ripper (если доступен)")
+    print("3. hashcat - Hashcat (если доступен)")
+    print("4. ← Назад в главное меню")
+    while True:
+        choice = input("Выберите инструмент (1-4): ").strip()
+        if choice in ["1", "2", "3", "4"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2, 3 или 4.")
+
+def dictionaries_menu():
+    """Меню словарей и баз данных"""
+    print(f"\n{COLOR_YELLOW}📚 Словари и базы данных:{COLOR_RESET}")
+    print("1. seclists - коллекция словарей для пентеста")
+    print("2. rockyou.txt - популярный словарь паролей")
+    print("3. seclists + rockyou (установка и настройка)")
+    print("4. ← Назад в главное меню")
+    while True:
+        choice = input("Выберите действие (1-4): ").strip()
+        if choice in ["1", "2", "3", "4"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2, 3 или 4.")
+
+def additional_tools_menu():
+    """Меню дополнительных инструментов"""
+    print(f"\n{COLOR_YELLOW}🛠 Дополнительные инструменты:{COLOR_RESET}")
+    print("1. nmap - сетевой сканер")
+    print("2. metasploit - фреймворк для пентеста")
+    print("3. nikto - веб-сканер уязвимостей")
+    print("4. gobuster - веб-сканер директорий")
+    print("5. hydra - брутфорс-инструмент")
+    print("6. ← Назад в главное меню")
+    while True:
+        choice = input("Выберите инструмент (1-6): ").strip()
+        if choice in ["1", "2", "3", "4", "5", "6"]:
+            return choice
+        else:
+            warning("Неверный выбор! Введите 1, 2, 3, 4, 5 или 6.")
+
 def main_menu():
     print_ascii_banner()
     print(f"{COLOR_YELLOW}Главное меню:{COLOR_RESET}")
-    print("1. Полная установка (базовые пакеты и опции)")
-    print("2. Установка дополнительного пакета")
-    print("3. Установка Burp Suite Community")
-    print("4. Установка WPScan")
-    print("5. Установка seclists и rockyou")
-    print("6. Установка pre2k (Password Recovery Tool)")
-    print("7. Обновление системы")
-    print("8. Выйти")
+    print("1. 🔧 Системные утилиты")
+    print("2. 🌐 Веб-безопасность")
+    print("3. 🔐 Восстановление паролей")
+    print("4. 📚 Словари и базы данных")
+    print("5. 🛠 Дополнительные инструменты")
+    print("6. ❌ Выйти")
     while True:
-        choice = input("Выберите действие (1-8): ").strip()
-        if choice in ["1", "2", "3", "4", "5", "6", "7", "8"]:
+        choice = input("Выберите категорию (1-6): ").strip()
+        if choice in ["1", "2", "3", "4", "5", "6"]:
             return choice
         else:
-            warning("Неверный выбор! Введите 1, 2, 3, 4, 5, 6, 7 или 8.")
+            warning("Неверный выбор! Введите 1, 2, 3, 4, 5 или 6.")
 
 if __name__ == "__main__":
     # Проверка операционной системы
@@ -570,35 +745,77 @@ if __name__ == "__main__":
 
     # Главный цикл программы
     while True:
-        action = main_menu()
-        if action == "1":
-            # Полная установка
-            apt_update_upgrade()
-            check_or_install_package('seclists', 'seclists')
-            check_and_extract_rockyou()
-            check_or_install_wpscan()
-            check_or_install_burpsuite()
-            check_or_install_pre2k()
-            additional_packages_manual_menu()
-        elif action == "2":
-            # Только установка дополнительных пакетов
-            additional_packages_manual_menu()
-        elif action == "3":
-            # Установка Burp Suite Community
-            check_or_install_burpsuite()
-        elif action == "4":
-            # Установка WPScan
-            check_or_install_wpscan()
-        elif action == "5":
-            # Установка seclists и rockyou
-            install_seclists_and_rockyou()
-        elif action == "6":
-            # Установка pre2k
-            check_or_install_pre2k()
-        elif action == "7":
-            # Обновление системы
-            system_update_only()
-        elif action == "8":
+        main_choice = main_menu()
+        
+        if main_choice == "1":  # Системные утилиты
+            while True:
+                sub_choice = system_utilities_menu()
+                if sub_choice == "1":
+                    system_update_only()
+                elif sub_choice == "2":
+                    # Полная установка
+                    apt_update_upgrade()
+                    check_or_install_package('seclists', 'seclists')
+                    check_and_extract_rockyou()
+                    check_or_install_wpscan()
+                    check_or_install_burpsuite()
+                    check_or_install_pre2k()
+                elif sub_choice == "3":
+                    additional_packages_manual_menu()
+                elif sub_choice == "4":
+                    break  # Назад в главное меню
+                
+        elif main_choice == "2":  # Веб-безопасность
+            while True:
+                sub_choice = web_security_menu()
+                if sub_choice == "1":
+                    check_or_install_burpsuite()
+                elif sub_choice == "2":
+                    check_or_install_wpscan()
+                elif sub_choice == "3":
+                    break  # Назад в главное меню
+                    
+        elif main_choice == "3":  # Восстановление паролей
+            while True:
+                sub_choice = password_recovery_menu()
+                if sub_choice == "1":
+                    check_or_install_pre2k()
+                elif sub_choice == "2":
+                    install_john()
+                elif sub_choice == "3":
+                    install_hashcat()
+                elif sub_choice == "4":
+                    break  # Назад в главное меню
+                    
+        elif main_choice == "4":  # Словари и базы данных
+            while True:
+                sub_choice = dictionaries_menu()
+                if sub_choice == "1":
+                    check_or_install_package('seclists', 'seclists')
+                elif sub_choice == "2":
+                    check_and_extract_rockyou()
+                elif sub_choice == "3":
+                    install_seclists_and_rockyou()
+                elif sub_choice == "4":
+                    break  # Назад в главное меню
+                    
+        elif main_choice == "5":  # Дополнительные инструменты
+            while True:
+                sub_choice = additional_tools_menu()
+                if sub_choice == "1":
+                    install_nmap()
+                elif sub_choice == "2":
+                    install_metasploit()
+                elif sub_choice == "3":
+                    install_nikto()
+                elif sub_choice == "4":
+                    install_gobuster()
+                elif sub_choice == "5":
+                    install_hydra()
+                elif sub_choice == "6":
+                    break  # Назад в главное меню
+                    
+        elif main_choice == "6":  # Выход
             print("Выход.")
             sys.exit(0)
         
