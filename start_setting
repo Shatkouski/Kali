@@ -25,10 +25,10 @@ def print_ascii_banner():
                     ╚══════╝╚══════╝    ╚═╝  ╚═╝╚══════╝╚═════╝        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝
 
 {COLOR_RED}                    ╔══════════════════════════════════════════════════════════╗
-                                                 KALI PENTEST AUTOMATION                   
-                                                  SL RED TEAM TOOLKIT                      
-                               ╚══════════════════════════════════════════════════════════╝{COLOR_RESET}
-{COLOR_RED}                            Автоматизация установки инструментов{COLOR_RESET}
+                    ║                    KALI PENTEST AUTOMATION                    ║
+                    ║                      SL RED TEAM TOOLKIT                      ║
+                    ╚══════════════════════════════════════════════════════════╝{COLOR_RESET}
+{COLOR_RED}                        Автоматизация установки инструментов{COLOR_RESET}
 """
     print(banner)
 
